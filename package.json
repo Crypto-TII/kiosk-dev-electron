@@ -1,0 +1,40 @@
+{
+  "name": "orange",
+  "version": "1.0.0",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "electron .",
+    "build": "electron-builder",
+    "release:all": "electron-builder --mac --win --linux --x64 --arm64"
+  },
+  "build": {
+    "appId": "com.orange.app",
+    "productName": "Orange",
+    "files": [
+      "**/*",
+      "!node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}",
+      "!**/.*.swp"
+    ],
+    "mac": {
+      "target": ["dmg", "zip"],
+      "arch": ["x64", "arm64"]
+    },
+    "win": {
+      "target": ["nsis", "zip"],
+      "arch": ["x64"]
+    },
+    "linux": {
+      "target": ["AppImage", "deb", "zip"],
+      "arch": ["x64"]
+    }
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "electron": "^37.4.0"
+  }
+}
