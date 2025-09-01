@@ -5,6 +5,7 @@ function createWindow () {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
+    icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -20,12 +21,45 @@ function createWindow () {
   })
 
 
-  // Load the original URL in the main window
-  win.loadURL('https://cedt-next.private-crc.org/api/kiosks')
+  // Check if the website is reachable before loading
+  const targetUrl = 'https://cedt-next.private-crc.org/api/kiosks';
+  const https = require('https');
+  https.get(targetUrl, (res) => {
+    if (res.statusCode >= 200 && res.statusCode < 400) {
+      win.loadURL(targetUrl);
+    } else {
+      showSplash(win);
+    }
+  }).on('error', () => {
+    showSplash(win);
+  });
+
+  function showSplash(win) {
+    win.loadURL('data:text/html;charset=utf-8,' +
+      encodeURIComponent(`
+        <html>
+        <head>
+          <title>Orange Network Unreachable</title>
+          <style>
+            body { font-family: Arial, sans-serif; background: #222; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+            .splash { background: #ff9800; color: #222; padding: 32px 40px; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.18); }
+            h1 { margin-top: 0; }
+          </style>
+        </head>
+        <body>
+          <div class="splash">
+            <h1>Orange Network could not be reached</h1>
+            <p>Please check your internet connection or VPN and try again.</p>
+          </div>
+        </body>
+        </html>
+      `)
+    );
+  }
 
   // Start in kiosk mode
-  win.setKiosk(true)
-  win.setMenuBarVisibility(false)
+  // win.setKiosk(true)
+  // win.setMenuBarVisibility(false)
 
   // IPC handlers
   ipcMain.on('quit-app', () => {
@@ -86,5 +120,6 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+  app.quit();
+  process.exit(0);
 })
