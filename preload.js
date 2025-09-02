@@ -2,7 +2,8 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
   quitApp: () => ipcRenderer.send('quit-app'),
-  toggleKiosk: () => ipcRenderer.send('toggle-kiosk')
+  toggleKiosk: () => ipcRenderer.send('toggle-kiosk'),
+  getVersion: () => ipcRenderer.invoke('get-app-version')
 })
 
 window.addEventListener('DOMContentLoaded', () => {
@@ -29,6 +30,13 @@ window.addEventListener('DOMContentLoaded', () => {
       border: none; border-radius: 6px; padding: 10px 18px; margin: 8px 0;
       font-weight: bold; cursor: pointer;
       box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    }
+    #toolbar-version {
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 12px;
+      color: rgba(255,255,255,0.65);
     }
   `
   document.head.appendChild(style)
@@ -61,6 +69,11 @@ window.addEventListener('DOMContentLoaded', () => {
   quitBtn.style.color = '#fff'
   toolbar.appendChild(quitBtn)
 
+  const versionEl = document.createElement('div')
+  versionEl.id = 'toolbar-version'
+  versionEl.textContent = 'v …'
+  toolbar.appendChild(versionEl)
+
   // ---------- Behavior: click to toggle, outside click/Esc to close
   const showToolbar = () => { toolbar.style.display = 'block' }
   const hideToolbar = () => { toolbar.style.display = 'none' }
@@ -82,4 +95,8 @@ window.addEventListener('DOMContentLoaded', () => {
   ipcRenderer.on('set-toolbar-color', (_event, color) => {
     toolbarTrigger.style.background = color
   })
+
+  ipcRenderer.invoke('get-app-version')
+    .then(v => { versionEl.textContent = `v ${v}`; })
+    .catch(() => { versionEl.textContent = 'v unknown'; });
 })

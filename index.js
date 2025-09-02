@@ -106,6 +106,7 @@ function toggleKioskMode() {
 }
 
 function createAppMenu() {
+  const version = app.getVersion(); 
   const template = [
     {
       label: 'Edit',
@@ -116,6 +117,8 @@ function createAppMenu() {
     {
       label: 'App',
       submenu: [
+        { label: `Version ${version}`, enabled: false },
+        { type: 'separator' },
         {
           label: 'Toggle Kiosk Mode',
           accelerator: 'CommandOrControl+Shift+K',
@@ -164,6 +167,10 @@ ipcMain.on('toggle-kiosk', () => {
 
 ipcMain.on('quit-app', async () => {
   await exitApp();
+})
+
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
 })
 
 /* EVENT HANDLERS ******************************************************/
