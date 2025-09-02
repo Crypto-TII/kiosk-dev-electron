@@ -14,7 +14,7 @@
   },
   "build": {
     "appId": "com.orange.app",
-    "productName": "Orange",
+    "productName": "orange-kiosk-app",
     "icon": "assets/icon.png",
     "files": [
       "**/*",
@@ -32,7 +32,7 @@
     }
   },
   "keywords": [],
-  "author": "",
+  "author": "devops.crc@tii.ae",
   "license": "ISC",
   "description": "Orange Kiosk App – Secure, cross-platform kiosk application.",
   "devDependencies": {
