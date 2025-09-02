@@ -1,5 +1,5 @@
 {
-  "name": "orange",
+  "name": "orange-kiosk-app",
   "version": "1.0.1",
   "main": "index.js",
   "type": "commonjs",
@@ -34,7 +34,7 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Orange Kiosk App – Secure, cross-platform kiosk application.",
   "devDependencies": {
     "electron": "^37.4.0",
     "electron-builder": "^26.0.12"
