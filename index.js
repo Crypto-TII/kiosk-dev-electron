@@ -1,7 +1,56 @@
-const { app, BrowserWindow, globalShortcut, ipcMain, Menu } = require('electron')
+const { app, BrowserWindow, globalShortcut, ipcMain, Menu, session } = require('electron')
 const path = require('path')
 
-// ---------------------   WINDOW START
+const KIOSK_APP_URL = 'https://cedt-next.private-crc.org/api/kiosks';
+
+/* FUNCTIONS DEFINITION ******************************************************/
+
+function showNetworkErrorScreen(win) {
+  win.loadURL('data:text/html;charset=utf-8,' +
+    encodeURIComponent(`
+      <html>
+      <head>
+        <title>Orange Network Unreachable</title>
+        <style>
+          body { font-family: Arial, sans-serif; background: #222; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+          .splash { background: #ff9800; color: #222; padding: 32px 40px; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.18); }
+          h1 { margin-top: 0; }
+        </style>
+      </head>
+      <body>
+        <div class="splash">
+          <h1>Orange Network could not be reached</h1>
+          <p>Please check your internet connection or VPN and try again.</p>
+        </div>
+      </body>
+      </html>
+    `)
+  );
+}
+
+function loadKioskAppUrl(win) {
+  const https = require('https');
+  https.get(KIOSK_APP_URL, (res) => {
+    if (res.statusCode >= 200 && res.statusCode < 400) {
+      win.loadURL(KIOSK_APP_URL);
+    } else {
+      showNetworkErrorScreen(win);
+    }
+  }).on('error', () => {
+    showNetworkErrorScreen(win);
+  });
+}
+
+function initializeWindow(win) {
+  loadKioskAppUrl(win);
+
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    win.webContents.loadURL(url)
+    return { action: 'deny' }
+  })
+
+  win.webContents.send('toggle-kiosk-color', 'rgba(17, 255, 0, 0.7)');
+}
 
 function createWindow() {
   const { screen } = require('electron');
@@ -32,58 +81,10 @@ function createWindow() {
 
   win.setContentProtection(true);
 
-  // Check if the website is reachable before loading
-  const targetUrl = 'https://cedt-next.private-crc.org/api/kiosks';
-  const https = require('https');
-  https.get(targetUrl, (res) => {
-    if (res.statusCode >= 200 && res.statusCode < 400) {
-      win.loadURL(targetUrl);
-    } else {
-      showSplash(win);
-    }
-  }).on('error', () => {
-    showSplash(win);
-  });
-
-  function showSplash(win) {
-    win.loadURL('data:text/html;charset=utf-8,' +
-      encodeURIComponent(`
-        <html>
-        <head>
-          <title>Orange Network Unreachable</title>
-          <style>
-            body { font-family: Arial, sans-serif; background: #222; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; }
-            .splash { background: #ff9800; color: #222; padding: 32px 40px; border-radius: 12px; box-shadow: 0 4px 24px rgba(0,0,0,0.18); }
-            h1 { margin-top: 0; }
-          </style>
-        </head>
-        <body>
-          <div class="splash">
-            <h1>Orange Network could not be reached</h1>
-            <p>Please check your internet connection or VPN and try again.</p>
-          </div>
-        </body>
-        </html>
-      `)
-    );
-  }
-
-  // Handle new window creation
-  win.webContents.setWindowOpenHandler(({ url }) => {
-    win.webContents.loadURL(url)
-    return { action: 'deny' }
-  })
-
-  // win.setKiosk(true);         // Enable kiosk mode
-  // win.setAlwaysOnTop(true);   // Ensure window stays on top
-  // win.webContents.send('toggle-kiosk-color', 'rgba(255, 8, 0, 0.7)');
-  // console.log('Entered kiosk mode');
-  win.webContents.send('toggle-kiosk-color', 'rgba(17, 255, 0, 0.7)');
+  return win;
 }
 
-// ---------------------   WINDOW END
-
-function toggleKiosk() {
+function toggleKioskMode() {
   const win = BrowserWindow.getFocusedWindow()
   if (!win) return; // Guard against no focused window
 
@@ -91,18 +92,13 @@ function toggleKiosk() {
   console.log('Current kiosk state:', isCurrentlyKiosk);
 
   if (isCurrentlyKiosk) {
-    // Exit kiosk mode sequence
-    win.setKiosk(false);         // Disable kiosk mode
-    // win.setAlwaysOnTop(true);   //  window stays on top
+    win.setKiosk(false);
     win.webContents.send('toggle-kiosk-color', 'rgba(17, 255, 0, 0.7)');
     console.log('Exit kiosk mode');
   } else {
-    // Enter kiosk mode sequence
-    win.setFullScreen(false);     // Exit fullscreen first
-    // Wait for fullscreen to be fully disabled
+    win.setFullScreen(false);
     setTimeout(() => {
-      win.setKiosk(true);         // Enable kiosk mode
-      // win.setAlwaysOnTop(true);   // Ensure window stays on top
+      win.setKiosk(true);
       win.webContents.send('toggle-kiosk-color', 'rgba(255, 8, 0, 0.7)');
       console.log('Entered kiosk mode');
     }, 200);
@@ -111,28 +107,28 @@ function toggleKiosk() {
 
 function createAppMenu() {
   const template = [
-    // Edit menu (needed for copy/paste shortcuts)
     {
       label: 'Edit',
       submenu: [
-        { role: 'undo' },
-        { role: 'redo' },
-        { type: 'separator' },
-        { role: 'cut' },
-        { role: 'copy' },
-        { role: 'paste' },
-        { role: 'selectAll' }
+        { role: 'paste' }
       ]
     },
-    // App menu with Exit
     {
       label: 'App',
       submenu: [
         {
+          label: 'Toggle Kiosk Mode',
+          accelerator: 'CommandOrControl+Shift+K',
+          click: async () => clearCache()
+        },
+        {
+          label: 'Clear Cache',
+          click: async () => clearCache()
+        },
+        {
           label: 'Exit',
-          accelerator: 'CmdOrCtrl+Q',
-          click: () => app.quit()
-        }
+          click: async () => exitApp()
+        },
       ]
     }
   ]
@@ -141,29 +137,46 @@ function createAppMenu() {
   Menu.setApplicationMenu(menu)
 }
 
-// IPC handlers
-ipcMain.on('quit-app', () => {
+async function clearCache() {
+  try {
+    const ses = session.defaultSession;
+    if (ses) {
+      await ses.clearStorageData();
+      await ses.clearCache();
+      console.log("Cache and storage cleared successfully.");
+    }
+  } catch (err) {
+    console.error("Error clearing cache:", err);
+  }
+}
+
+async function exitApp() {
+  await clearCache();
   app.quit();
   process.exit(0);
-})
+}
+
+/* IPC HANDLERS ******************************************************/
 
 ipcMain.on('toggle-kiosk', () => {
-  toggleKiosk();
+  toggleKioskMode();
 })
+
+ipcMain.on('quit-app', async () => {
+  await exitApp();
+})
+
+/* EVENT HANDLERS ******************************************************/
+
+app.on('window-all-closed', async () => {
+  await exitApp();
+});
 
 app.whenReady().then(() => {
   const win = createWindow()
-  createAppMenu()
 
+  initializeWindow(win)
+  createAppMenu();
 
-  // Disable global shortcuts like Cmd+Q on macOS (optional)
-  // globalShortcut.unregisterAll()
-
-  globalShortcut.register('CommandOrControl+Shift+K', toggleKiosk)
-
-})
-
-app.on('window-all-closed', () => {
-  app.quit();
-  process.exit(0);
+  globalShortcut.register('CommandOrControl+Shift+K', toggleKioskMode)
 })
