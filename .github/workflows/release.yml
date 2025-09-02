@@ -30,6 +30,7 @@ jobs:
 
       - name: Package Electron app
         working-directory: kiosk-app
+        shell: bash
         run: |
           if [[ "${{ runner.os }}" == "macOS" ]]; then
             npm run release:mac-x64 && npm run release:mac-arm64
