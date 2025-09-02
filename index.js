@@ -49,7 +49,7 @@ function initializeWindow(win) {
     return { action: 'deny' }
   })
 
-  win.webContents.send('toggle-kiosk-color', 'rgba(17, 255, 0, 0.7)');
+  win.webContents.send('set-toolbar-color', 'rgba(17, 255, 0, 0.7)');
 }
 
 function createWindow() {
@@ -93,13 +93,13 @@ function toggleKioskMode() {
 
   if (isCurrentlyKiosk) {
     win.setKiosk(false);
-    win.webContents.send('toggle-kiosk-color', 'rgba(17, 255, 0, 0.7)');
+    win.webContents.send('set-toolbar-color', 'rgba(17, 255, 0, 0.7)');
     console.log('Exit kiosk mode');
   } else {
     win.setFullScreen(false);
     setTimeout(() => {
       win.setKiosk(true);
-      win.webContents.send('toggle-kiosk-color', 'rgba(255, 8, 0, 0.7)');
+      win.webContents.send('set-toolbar-color', 'rgba(255, 8, 0, 0.7)');
       console.log('Entered kiosk mode');
     }, 200);
   }
@@ -119,7 +119,7 @@ function createAppMenu() {
         {
           label: 'Toggle Kiosk Mode',
           accelerator: 'CommandOrControl+Shift+K',
-          click: async () => clearCache()
+          click: async () => toggleKioskMode()
         },
         {
           label: 'Clear Cache',
