@@ -1,10 +1,18 @@
-const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain } = require('electron')
+const { app, BrowserWindow, globalShortcut, ipcMain, Menu } = require('electron')
 const path = require('path')
 
-function createWindow () {
+// ---------------------   WINDOW START
+
+function createWindow() {
+  const { screen } = require('electron');
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width, height } = primaryDisplay.workAreaSize;
+
   const win = new BrowserWindow({
-    width: 1280,
-    height: 800,
+    width: width,
+    height: height,
+    x: 0,
+    y: 0,
     icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: {
       nodeIntegration: false,
@@ -12,14 +20,17 @@ function createWindow () {
       preload: path.join(__dirname, 'preload.js')
     },
     frame: true,
-    titleBarStyle: 'default',
     resizable: true,
     movable: true,
     minimizable: true,
     maximizable: true,
-    closable: true
+    fullScreenable: true,
+    closable: true,
+    // alwaysOnTop: true,
+    backgroundColor: '#000000',
   })
 
+  win.setContentProtection(true);
 
   // Check if the website is reachable before loading
   const targetUrl = 'https://cedt-next.private-crc.org/api/kiosks';
@@ -57,66 +68,99 @@ function createWindow () {
     );
   }
 
-  // Start in kiosk mode
-  // win.setKiosk(true)
-  // win.setMenuBarVisibility(false)
-
-  // IPC handlers
-  ipcMain.on('quit-app', () => {
-    app.quit()
-  })
-
-  ipcMain.on('toggle-kiosk', () => {
-    const next_state_is_kiosk = !win.isKiosk();
-    win.setKiosk(next_state_is_kiosk);
-    win.setMenuBarVisibility(!next_state_is_kiosk);
-    win.setResizable(!next_state_is_kiosk);
-    win.setMovable(!next_state_is_kiosk);
-    win.setMinimizable(!next_state_is_kiosk);
-    win.setMaximizable(!next_state_is_kiosk);
-    win.setClosable(!next_state_is_kiosk);
-    win.setFullScreen(next_state_is_kiosk);
-    // win.setFrame(!next_state_is_kiosk ? true : false);
-  })
-
-  // Disable common shortcuts that interfere
-  win.webContents.on('before-input-event', (event, input) => {
-    const forbidden = [
-      'F12', // DevTools
-      'Control+W', // Close tab
-      'Control+T', // New tab
-      'Control+R', // Reload
-      'F5'
-    ]
-    if (forbidden.includes(input.key) || (input.control && ['w','t','r'].includes(input.key.toLowerCase()))) {
-      event.preventDefault()
-    }
-  })
-
   // Handle new window creation
   win.webContents.setWindowOpenHandler(({ url }) => {
     win.webContents.loadURL(url)
     return { action: 'deny' }
   })
+
+  // win.setKiosk(true);         // Enable kiosk mode
+  // win.setAlwaysOnTop(true);   // Ensure window stays on top
+  // win.webContents.send('toggle-kiosk-color', 'rgba(255, 8, 0, 0.7)');
+  // console.log('Entered kiosk mode');
+  win.webContents.send('toggle-kiosk-color', 'rgba(17, 255, 0, 0.7)');
 }
+
+// ---------------------   WINDOW END
+
+function toggleKiosk() {
+  const win = BrowserWindow.getFocusedWindow()
+  if (!win) return; // Guard against no focused window
+
+  const isCurrentlyKiosk = win.isKiosk();
+  console.log('Current kiosk state:', isCurrentlyKiosk);
+
+  if (isCurrentlyKiosk) {
+    // Exit kiosk mode sequence
+    win.setKiosk(false);         // Disable kiosk mode
+    // win.setAlwaysOnTop(true);   //  window stays on top
+    win.webContents.send('toggle-kiosk-color', 'rgba(17, 255, 0, 0.7)');
+    console.log('Exit kiosk mode');
+  } else {
+    // Enter kiosk mode sequence
+    win.setFullScreen(false);     // Exit fullscreen first
+    // Wait for fullscreen to be fully disabled
+    setTimeout(() => {
+      win.setKiosk(true);         // Enable kiosk mode
+      // win.setAlwaysOnTop(true);   // Ensure window stays on top
+      win.webContents.send('toggle-kiosk-color', 'rgba(255, 8, 0, 0.7)');
+      console.log('Entered kiosk mode');
+    }, 200);
+  }
+}
+
+function createAppMenu() {
+  const template = [
+    // Edit menu (needed for copy/paste shortcuts)
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' }
+      ]
+    },
+    // App menu with Exit
+    {
+      label: 'App',
+      submenu: [
+        {
+          label: 'Exit',
+          accelerator: 'CmdOrCtrl+Q',
+          click: () => app.quit()
+        }
+      ]
+    }
+  ]
+
+  const menu = Menu.buildFromTemplate(template)
+  Menu.setApplicationMenu(menu)
+}
+
+// IPC handlers
+ipcMain.on('quit-app', () => {
+  app.quit();
+  process.exit(0);
+})
+
+ipcMain.on('toggle-kiosk', () => {
+  toggleKiosk();
+})
 
 app.whenReady().then(() => {
   const win = createWindow()
+  createAppMenu()
+
 
   // Disable global shortcuts like Cmd+Q on macOS (optional)
-  globalShortcut.unregisterAll()
+  // globalShortcut.unregisterAll()
 
-  // Register a rarely-used global shortcut to toggle kiosk mode
-  globalShortcut.register('Control+Shift+G', () => {
-    if (win && !win.isDestroyed()) {
-      win.setKiosk(!win.isKiosk())
-      win.setMenuBarVisibility(!win.isKiosk())
-    }
-  })
+  globalShortcut.register('CommandOrControl+Shift+K', toggleKiosk)
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow()
-  })
 })
 
 app.on('window-all-closed', () => {

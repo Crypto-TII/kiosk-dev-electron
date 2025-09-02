@@ -1,4 +1,3 @@
-
 const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('electronAPI', {
@@ -7,6 +6,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 })
 
 window.addEventListener('DOMContentLoaded', () => {
+
   // Inject toolbar HTML
   console.log('Preload script running: injecting toolbar');
   const toolbarTrigger = document.createElement('div');
@@ -17,7 +17,7 @@ window.addEventListener('DOMContentLoaded', () => {
   toolbarTrigger.style.width = '16px';
   toolbarTrigger.style.height = '16px';
   toolbarTrigger.style.zIndex = '9999';
-//   toolbarTrigger.style.background = 'linear-gradient(200deg, #ff9800 60%, #fff3e0 100%)';
+  //   toolbarTrigger.style.background = 'linear-gradient(200deg, #ff9800 60%, #fff3e0 100%)';
   toolbarTrigger.style.borderTopLeftRadius = '';
   toolbarTrigger.style.background = 'rgba(0, 60, 255, 0.49)';
   document.body.appendChild(toolbarTrigger);
@@ -100,5 +100,8 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   releaseBtn.addEventListener('click', () => {
     ipcRenderer.send('toggle-kiosk');
+  });
+  ipcRenderer.on('toggle-kiosk-color', (event, color) => {
+    toolbarTrigger.style.background = color;
   });
 });
