@@ -1,0 +1,71 @@
+name: Build and Release Electron App
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'   # Triggers on version tags like v1.2.3
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Electron app
+        run: npm run build
+
+      - name: Package Electron app
+        run: |
+          if [[ "${{ runner.os }}" == "macOS" ]]; then
+            npm run release:mac-x64 && npm run release:mac-arm64
+          elif [[ "${{ runner.os }}" == "Windows" ]]; then
+            npm run release:win-x64
+          elif [[ "${{ runner.os }}" == "Linux" ]]; then
+            npm run release:linux-x64
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ runner.os }}-build
+          path: dist/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          files: dist/**/*
+          draft: false
+          prerelease: false
+
+      - name: Update latest release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          gh release delete latest -y || true
+          gh release create latest dist/**/* --title "Latest" --notes "Latest build"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
