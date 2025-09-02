@@ -12,6 +12,7 @@
   "release:win-x64": "electron-builder --win --x64",
   "release:linux-x64": "electron-builder --linux --x64"
   },
+  "homepage": "https://github.com/Crypto-TII/kiosk-dev-electron",
   "build": {
     "appId": "com.orange.app",
     "productName": "orange-kiosk-app",
@@ -28,11 +29,12 @@
       "target": ["nsis", "zip"]
     },
     "linux": {
-      "target": ["AppImage", "deb", "zip"]
+      "target": ["AppImage", "deb", "zip"],
+      "maintainer": "DevOps CRC <devops.crc@tii.ae>"
     }
   },
   "keywords": [],
-  "author": "devops.crc@tii.ae",
+  "author": "DevOps CRC <devops.crc@tii.ae>",
   "license": "ISC",
   "description": "Orange Kiosk App – Secure, cross-platform kiosk application.",
   "devDependencies": {
